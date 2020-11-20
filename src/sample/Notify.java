@@ -3,10 +3,14 @@ package sample;
 import javafx.animation.FadeTransition;
 import javafx.application.Platform;
 import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.control.Button;
+import javafx.scene.control.Label;
+import javafx.scene.control.TextField;
 import javafx.scene.image.Image;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -22,8 +26,10 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.util.Duration;
+import java.awt.*;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -64,6 +70,9 @@ class Config {
     public String msqColor = "#000000";
     public Integer waitTime = 7000;
     public Double bgOpacity = 0.9;
+    public ArrayList<Button> buttnos = null;
+    public TextField textField = null;
+    public ComboBox<Label> list = null;
 }
 
 public class Notify {
@@ -71,26 +80,6 @@ public class Notify {
     final private Stage window = new Stage();
     final private BorderPane panel = new BorderPane();
     final private HBox content = new HBox();
-    private Button ok;
-    private Button cansel;
-    private TextField field;
-    private ComboBox<Label> list;
-
-    public Button getOk() {
-        return ok;
-    }
-
-    public Button getCansel() {
-        return cansel;
-    }
-
-    public TextField getField() {
-        return field;
-    }
-
-    public ComboBox<Label> getList() {
-        return list;
-    }
 
     public static class Builder {
         private Notify newNotify;
@@ -141,6 +130,56 @@ public class Notify {
 
         public Builder withBorder(Border border) {
             newNotify.config.iconBorder = border;
+            return this;
+        }
+
+        public Builder withButtons(Button button, EventHandler func) {
+            if(newNotify.config.buttnos == null)
+                newNotify.config.buttnos = new ArrayList<Button>();
+            button.setOnAction(func);
+            newNotify.config.buttnos.add(button);
+            return this;
+        }
+
+        public Builder withCanselButton(String buttonString) {
+            Button cansel = new Button(buttonString);
+            cansel.setOnAction(actionEvent -> {
+                newNotify.window.close();
+            });
+
+            newNotify.config.buttnos.add(cansel);
+            return this;
+        }
+
+        public Builder withTextField() {
+            newNotify.config.textField = new TextField();
+            if(newNotify.config.buttnos == null)
+                newNotify.config.buttnos = new ArrayList<Button>();
+            Button ok = new Button("Ok");
+            ok.setOnAction(actionEvent ->{
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION, newNotify.config.textField.getText(), ButtonType.YES);
+                newNotify.config.textField.clear();
+                alert.showAndWait();
+            });
+
+            newNotify.config.buttnos.add(ok);
+            return this;
+        }
+
+        public Builder withCombobox(Label... labels) {
+            newNotify.config.list = new ComboBox<Label>();
+            if(newNotify.config.buttnos == null)
+                newNotify.config.buttnos = new ArrayList<Button>();
+
+            Button ok = new Button("Ok");
+            ok.setOnAction(actionEvent ->{
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION, newNotify.config.list.getValue().getText(), ButtonType.YES);
+                alert.showAndWait();
+            });
+
+            for(Label label: labels) {
+                newNotify.config.list.getItems().addAll(label);
+            }
             return this;
         }
 
@@ -220,57 +259,31 @@ public class Notify {
         vbox.getChildren().addAll(app,title, msg);
         vbox.setSpacing(2);
         content.getChildren().addAll(vbox);
-        panel.setCenter(content);
-    }
 
-    private void buildview(){
-        if(config.view == View.WITHBUTTON || config.view == View.WITHBUTTONANDFIELD || config.view == View.WITHBUTTONANDLIST) {
-            HBox buttons = new HBox();
-            ok = new Button("ok");
-            ok.setOnAction(actionEvent -> {
-                window.close();
-            });
+        HBox managementObjects = new HBox();
+        managementObjects.setAlignment(Pos.CENTER);
+        managementObjects.setPadding(new Insets(5.0, 5.0, 5.0, 5.0));
+        managementObjects.setSpacing(5.0);
 
-            cansel = new Button("cansel");
-            cansel.setOnAction(actionEvent -> {
-                window.close();
-            });
-
-            buttons.getChildren().addAll(ok, cansel);
-            buttons.setAlignment(Pos.CENTER);
-            buttons.setPadding(new Insets(5.0, 5.0, 5.0, 5.0));
-            buttons.setSpacing(5.0);
-            panel.setBottom(buttons);
-
-            if(config.view == View.WITHBUTTONANDFIELD) {
-                field = new TextField();
-                buttons.getChildren().addAll(field);
-                ok.setOnAction(actionEvent -> {
-                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION, field.getText(), ButtonType.YES);
-                    field.clear();
-                    alert.showAndWait();
-                });
-            }
-
-            if(config.view == View.WITHBUTTONANDLIST) {
-                list = new ComboBox<Label>();
-                list.getItems().addAll(
-                        new Label("well"),
-                        new Label("yes"),
-                        new Label("no"),
-                        new Label("I understood"));
-                buttons.getChildren().addAll(list);
-                ok.setOnAction(actionEvent -> {
-                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION, list.getValue().getText(), ButtonType.YES);
-                    alert.showAndWait();
-                });
-            }
+        for (Button button: config.buttnos) {
+            managementObjects.getChildren().addAll(button);
         }
+
+        if(config.textField != null) {
+            managementObjects.getChildren().addAll(config.textField);
+        }
+
+        if(config.list != null) {
+            managementObjects.getChildren().addAll(config.list);
+        }
+
+        panel.setCenter(content);
+        panel.setBottom(managementObjects);
     }
 
     private void buildwindow() {
         buildContent();
-        buildview();
+        // buildview();
         window.initStyle(StageStyle.UNDECORATED);
         var screenRect = Screen.getPrimary().getBounds();
 
