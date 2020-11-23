@@ -52,6 +52,21 @@ enum Border {
     RECTANGLE
 }
 
+enum TypeButton {
+    OK,
+    INFO,
+    CANSEL,
+}
+
+interface Action {
+    void call();
+}
+
+interface TextdAction {
+    void call(String text);
+}
+
+
 class Config {
     public Double defWidth = 300.0;
     public Double defHeight = 140.0;
@@ -71,6 +86,9 @@ class Config {
     public Integer waitTime = 7000;
     public Double bgOpacity = 0.9;
     public ArrayList<Button> buttnos = null;
+    public Button okButton = null;
+    public Button infoButton = null;
+    public Button canselButton = null;
     public TextField textField = null;
     public ComboBox<Label> list = null;
 }
@@ -133,53 +151,76 @@ public class Notify {
             return this;
         }
 
-        public Builder withButtons(Button button, EventHandler func) {
+        public Builder withButton(TypeButton typeButton,  Action action) {
             if(newNotify.config.buttnos == null)
                 newNotify.config.buttnos = new ArrayList<Button>();
-            button.setOnAction(func);
-            newNotify.config.buttnos.add(button);
+
+            switch (typeButton) {
+                case OK:
+                    if(newNotify.config.okButton == null) {
+                        newNotify.config.okButton = new Button("ok");
+                        newNotify.config.buttnos.add(newNotify.config.okButton);
+                    }
+                    newNotify.config.okButton.setOnAction(actionEvent -> {
+                        action.call();
+                        newNotify.window.close();
+                    });
+                    break;
+                case CANSEL:
+                    if(newNotify.config.canselButton == null) {
+                        newNotify.config.canselButton = new Button("cansel");
+                        newNotify.config.buttnos.add(newNotify.config.canselButton);
+                    }
+                    newNotify.config.canselButton.setOnAction(actionEvent -> {
+                        action.call();
+                        newNotify.window.close();
+                    });
+                    break;
+                case INFO:
+                    if(newNotify.config.infoButton == null) {
+                        newNotify.config.infoButton = new Button("ok");
+                        newNotify.config.buttnos.add(newNotify.config.infoButton);
+                    }
+                    newNotify.config.infoButton.setOnAction(actionEvent -> {
+                        action.call();
+                        newNotify.window.close();
+                    });
+                    break;
+            }
+
             return this;
         }
 
-        public Builder withCanselButton(String buttonString) {
-            Button cansel = new Button(buttonString);
-            cansel.setOnAction(actionEvent -> {
-                newNotify.window.close();
-            });
-
-            newNotify.config.buttnos.add(cansel);
-            return this;
-        }
-
-        public Builder withTextField() {
+        public Builder withTextField(TextdAction action) {
             newNotify.config.textField = new TextField();
             if(newNotify.config.buttnos == null)
                 newNotify.config.buttnos = new ArrayList<Button>();
             Button ok = new Button("Ok");
             ok.setOnAction(actionEvent ->{
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION, newNotify.config.textField.getText(), ButtonType.YES);
-                newNotify.config.textField.clear();
-                alert.showAndWait();
+                action.call(newNotify.config.textField.getText());
+                newNotify.window.close();
             });
 
             newNotify.config.buttnos.add(ok);
             return this;
         }
 
-        public Builder withCombobox(Label... labels) {
+        public Builder withCombobox(TextdAction action, Label... labels) {
             newNotify.config.list = new ComboBox<Label>();
             if(newNotify.config.buttnos == null)
                 newNotify.config.buttnos = new ArrayList<Button>();
 
             Button ok = new Button("Ok");
             ok.setOnAction(actionEvent ->{
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION, newNotify.config.list.getValue().getText(), ButtonType.YES);
-                alert.showAndWait();
+                action.call(newNotify.config.list.getValue().getText());
+                newNotify.window.close();
             });
 
             for(Label label: labels) {
                 newNotify.config.list.getItems().addAll(label);
             }
+
+            newNotify.config.buttnos.add(ok);
             return this;
         }
 
@@ -283,7 +324,6 @@ public class Notify {
 
     private void buildwindow() {
         buildContent();
-        // buildview();
         window.initStyle(StageStyle.UNDECORATED);
         var screenRect = Screen.getPrimary().getBounds();
 
